@@ -1,0 +1,102 @@
+/****************************************************************
+*								*
+*	EE201 Experiment 4					*
+*	The program below implements a 2-bit binary	*
+*	up-down counter and a 7-segment display.		*
+*								*
+****************************************************************/
+
+Name            2-bit-binary-counter;
+Partno          EE201;
+Revision        01;
+Date            6/12/13;
+Designer        L. Meany;
+Company         DCU;
+Location        None;
+Assembly        None;
+Device          g22v10;
+
+/** Inputs **/
+
+pin  1 = clk;			/* Counter clock */
+pin  2 = dir;			/* Counter direction: 1 = up, 0 = down */
+pin  3 = preset;		/* Active high synchronous counter preset (to 111) */
+pin  4 = reset;		/* Active high asynchronous counter reset (to 000) */
+pin  5 = !oe;			/* Active low counter output enable */
+
+/** Outputs **/
+
+/* We're driving LEDs and need a low voltage to make them light up.
+   So make all the outputs active low */
+
+pin 14 = q0;				/* Counter LSB */
+Pin 15 = q1;				/* Counter MSB */
+pin 16 = q2;
+Pin [17..23] = [a,b,c,d,e,f,g];	/* 7-segment outputs */
+
+/** Declarations and Intermediate Variable Definitions **/
+
+field count = [q2..0];		/* Define "count" as the three counter bits */
+$define s0 'b'000			/* Define the values of the counter bits in */
+$define s1 'b'001			/* each of the eight counter states */
+$define s2 'b'010
+$define s3 'b'011
+$define s4 'b'100			/* Define the values of the counter bits in */
+$define s5 'b'101			/* each of the eight counter states */
+$define s6 'b'110
+$define s7 'b'111
+
+
+field segments = [a,b,c,d,e,f,g];
+
+/** Logic Equations **/
+
+/* 3-bit counter */
+
+count.sp = preset;			/* Connect the register SP to the preset input */
+count.ar = reset;			/* Connect the register AR to the reset input */
+count.oe = oe;			/* Connect the output enable to the oe input */
+					/* We don't need to define a clock since all the registers in the g22v10 are permanently connected to pin one where we will put in our clock */
+
+up   = dir:1;
+down = dir:0;
+
+sequenced count {			/* Describe the action of the state machine */
+  present s0 	if up	next s1;
+  		if down	next s4;
+  present s1 	if up	next s3;
+  		if down	next s0;
+  present s2 	if up	next s6;
+  		if down	next s3;
+  present s3 	if up	next s2;
+  		if down	next s1;
+  present s4 	if up	next s0;
+  		if down	next s5;
+  present s5 	if up	next s4;
+  		if down	next s7;
+  present s6 	if up	next s7;
+  		if down	next s2;
+  present s7 	if up	next s5;
+  		if down	next s6;
+
+
+}
+
+$define on  'b'1
+$define off 'b'0
+
+					/* Light the segments in sequence */
+
+segments = 
+	[  on,  on,  on,  on,  on,  on, off ] & count:s0 #
+	[ off,  on,  on, off, off, off, off ] & count:s1 #
+	[  on,  on, off,  on,  on, off,  on ] & count:s2 #
+	[  on,  on,  on,  on,  off,  off, on ] & count:s3 #
+	[ off,  on,  on, off, off, on, on ] & count:s4 #
+	[  on,  off, on,  on,  off, on,  on ] & count:s5 #
+	[  on,  off,  on,  on, on, on,  on ] & count:s6	# 
+	[  on,  on, on,  off,  off, off,  off ] & count:s7;
+
+	
+	
+	
